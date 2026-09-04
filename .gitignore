@@ -1,0 +1,31 @@
+﻿# Configuraciones locales y secretos (NUNCA subir a Git)
+user_settings.json
+config.json
+*.local.json
+.env
+*.env
+
+# Entornos virtuales
+mi_entorno_seguro/
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache y bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller / Build artifacts
+build/
+*.manifest
+
+# Logs y depuración
+*.log
+
+# Archivos del sistema y editores
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
