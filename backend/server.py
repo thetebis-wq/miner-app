@@ -25,6 +25,8 @@ PATH_XMRIG = os.path.join(DIR_BASE, "xmrig", "xmrig.exe")
 PATH_CONFIG = os.path.join(DIR_BASE, "xmrig", "config.json")
 PATH_CONFIG_EXAMPLE = os.path.join(DIR_BASE, "config.example.json")
 PATH_USER_SETTINGS = os.path.join(DIR_BASE, "user_settings.json")
+PATH_USER_SETTINGS_ROOT = os.path.join(DIR_BASE, "..", "user_settings.json")
+PATH_CONFIG_ROOT = os.path.join(DIR_BASE, "..", "config.json")
 
 
 class MinerManager:
@@ -82,16 +84,68 @@ class MinerManager:
         }
         self.broadcast_event("log", log_entry)
 
+    def load_saved_settings(self):
+        """Carga wallet y pool desde user_settings.json o config.json existente."""
+        wallet = ""
+        pool = "pool.supportxmr.com:443"
+        rig_id = "MinerApp-Laptop"
+
+        # 1. Prioridad: user_settings.json (backend o raíz)
+        for path in [PATH_USER_SETTINGS, PATH_USER_SETTINGS_ROOT]:
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8-sig") as f:
+                        data = json.load(f)
+                        w = str(data.get("wallet") or "").strip()
+                        p = str(data.get("pool") or "").strip()
+                        r = str(data.get("rigId") or "").strip()
+                        if w and "TU_DIRECCION" not in w and "YOUR_" not in w:
+                            wallet = w
+                        if p:
+                            pool = p
+                        if r:
+                            rig_id = r
+                        if wallet:
+                            return {"wallet": wallet, "pool": pool, "rigId": rig_id}
+                except Exception:
+                    pass
+
+        # 2. Respaldo: config.json (backend/xmrig o raíz)
+        for path in [PATH_CONFIG, PATH_CONFIG_ROOT]:
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8-sig") as f:
+                        data = json.load(f)
+                        pools = data.get("pools", [])
+                        if pools and isinstance(pools, list) and len(pools) > 0:
+                            user_val = str(pools[0].get("user") or "").strip()
+                            if user_val and "TU_DIRECCION" not in user_val and "YOUR_" not in user_val:
+                                wallet = user_val
+                            url_val = str(pools[0].get("url") or "").strip()
+                            if url_val:
+                                pool = url_val
+                            r_val = str(pools[0].get("rig-id") or "").strip()
+                            if r_val:
+                                rig_id = r_val
+                            if wallet:
+                                return {"wallet": wallet, "pool": pool, "rigId": rig_id}
+                except Exception:
+                    pass
+
+        return {"wallet": wallet, "pool": pool, "rigId": rig_id}
+
     def get_status(self):
         with self.lock:
             uptime = int(time.time() - self.start_time) if self.state == "MINING" else 0
             self.stats["uptimeSeconds"] = uptime
+            saved_cfg = self.load_saved_settings()
             return {
                 "status": "ok",
                 "version": "2.2.0",
                 "engineExists": os.path.exists(PATH_XMRIG),
                 "state": self.state,
                 "stats": self.stats,
+                "savedConfig": saved_cfg,
             }
 
     def prepare_config(self, user_cfg):
@@ -136,15 +190,16 @@ class MinerManager:
             json.dump(config_data, f, indent=4)
 
         # Guardar copia privada
-        try:
-            with open(PATH_USER_SETTINGS, "w", encoding="utf-8") as f:
-                json.dump({
-                    "wallet": user_cfg.get("wallet", ""),
-                    "pool": user_cfg.get("pool", ""),
-                    "rigId": rig_id
-                }, f, indent=4)
-        except Exception:
-            pass
+        for p_out in [PATH_USER_SETTINGS, PATH_USER_SETTINGS_ROOT]:
+            try:
+                with open(p_out, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "wallet": user_cfg.get("wallet", ""),
+                        "pool": user_cfg.get("pool", ""),
+                        "rigId": rig_id
+                    }, f, indent=4)
+            except Exception:
+                pass
 
     def start(self, user_cfg):
         with self.lock:
@@ -323,6 +378,14 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/health":
             data = manager.get_status()
+            self.send_response(200)
+            self._send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+
+        elif self.path == "/api/config":
+            data = manager.load_saved_settings()
             self.send_response(200)
             self._send_cors_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")

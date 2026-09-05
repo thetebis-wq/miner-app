@@ -8,6 +8,7 @@ export interface MinerServiceCallbacks {
   onStats: (stats: TelemetryStats) => void;
   onStateChange: (state: MinerState) => void;
   onModeChange: (mode: EngineMode) => void;
+  onConfigLoaded?: (config: { wallet: string; pool: string; rigId?: string }) => void;
 }
 
 export class MinerService {
@@ -61,6 +62,9 @@ export class MinerService {
 
       if (res.ok) {
         const data: BackendHealth = await res.json();
+        if (data.savedConfig?.wallet && this.callbacks.onConfigLoaded) {
+          this.callbacks.onConfigLoaded(data.savedConfig);
+        }
         if (this.mode !== 'REAL') {
           this.setMode('REAL');
           this.callbacks.onLog(
@@ -125,6 +129,9 @@ export class MinerService {
           this.callbacks.onStateChange(data.state);
           if (data.stats) {
             this.callbacks.onStats(data.stats);
+          }
+          if (data.savedConfig?.wallet && this.callbacks.onConfigLoaded) {
+            this.callbacks.onConfigLoaded(data.savedConfig);
           }
         } catch {
           // ignore
@@ -209,6 +216,22 @@ export class MinerService {
     } else {
       this.simulatedEngine.stop();
     }
+  }
+
+  public async fetchSavedConfig(): Promise<{ wallet: string; pool: string; rigId?: string } | null> {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/config`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.wallet && this.callbacks.onConfigLoaded) {
+          this.callbacks.onConfigLoaded(data);
+        }
+        return data;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
   }
 
   public destroy() {

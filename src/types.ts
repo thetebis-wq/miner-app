@@ -8,6 +8,11 @@ export interface BackendHealth {
   engineExists: boolean;
   state: MinerState;
   stats: TelemetryStats;
+  savedConfig?: {
+    wallet: string;
+    pool: string;
+    rigId?: string;
+  };
 }
 
 export interface PoolConfig {

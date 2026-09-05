@@ -20,7 +20,12 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_CONFIG,
+          ...parsed,
+          wallet: parsed.wallet || DEFAULT_CONFIG.wallet,
+        };
       }
     } catch {
       // ignore
@@ -63,9 +68,31 @@ export default function App() {
       onStats: (newStats) => setStats(newStats),
       onStateChange: (newState) => setMinerState(newState),
       onModeChange: (newMode) => setEngineMode(newMode),
+      onConfigLoaded: (saved) => {
+        if (saved.wallet) {
+          setConfig((prev) => {
+            if (!prev.wallet || prev.wallet !== saved.wallet) {
+              const updated = {
+                ...prev,
+                wallet: saved.wallet,
+                pool: saved.pool || prev.pool,
+                rigId: saved.rigId || prev.rigId,
+              };
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+              } catch {
+                // ignore
+              }
+              return updated;
+            }
+            return prev;
+          });
+        }
+      },
     });
 
     serviceRef.current = service;
+    service.fetchSavedConfig();
     service.startHealthMonitoring();
 
     return () => {

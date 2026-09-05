@@ -1,7 +1,7 @@
 import { AdvancedMinerConfig } from '../types';
 
 export const DEFAULT_CONFIG: AdvancedMinerConfig = {
-  wallet: '',
+  wallet: '86uVMDHwsvm5pzksiQWetufLaF3fxPFaKSU3zYyvdgPbL8LzBsQwbNzKudb75M8cYCXtRp9VzoSdeNtcg2oCjT93TddTYjd',
   pool: 'pool.supportxmr.com:443',
   threadsHint: 75,
   hugePages: true,
