@@ -1,5 +1,15 @@
 export type MinerState = 'STOPPED' | 'CONNECTING' | 'MINING' | 'ERROR';
 
+export type EngineMode = 'REAL' | 'SIMULATED';
+
+export interface BackendHealth {
+  status: string;
+  version: string;
+  engineExists: boolean;
+  state: MinerState;
+  stats: TelemetryStats;
+}
+
 export interface PoolConfig {
   algo?: string | null;
   coin?: string | null;

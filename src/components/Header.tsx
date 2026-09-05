@@ -1,16 +1,19 @@
 import React from 'react';
-import { Cpu, ShieldCheck, FileText, Download, Activity } from 'lucide-react';
+import { Cpu, ShieldCheck, FileText, Download, Activity, Laptop, Zap } from 'lucide-react';
+import { EngineMode } from '../types';
 
 interface HeaderProps {
   onOpenConfigModal: () => void;
   onOpenGuideModal: () => void;
   isRunning: boolean;
+  mode: EngineMode;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenConfigModal,
   onOpenGuideModal,
   isRunning,
+  mode,
 }) => {
   return (
     <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-6 py-4 sticky top-0 z-20">
@@ -33,6 +36,23 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="px-2 py-0.5 text-xs font-semibold bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 rounded-md">
                 Clean & Agile
               </span>
+              {mode === 'REAL' ? (
+                <span
+                  className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/70 rounded-md"
+                  title="Conectado al proceso xmrig.exe en Windows"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Hardware Real
+                </span>
+              ) : (
+                <span
+                  className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-indigo-950/70 text-indigo-300 border border-indigo-800/60 rounded-md"
+                  title="Backend local no detectado. Modo Simulación activo para vista previa web / Google AI Studio."
+                >
+                  <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+                  Simulación Web
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />

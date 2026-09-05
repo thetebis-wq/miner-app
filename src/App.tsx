@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MinerState, AdvancedMinerConfig, TelemetryStats, TerminalLog } from './types';
+import { MinerState, AdvancedMinerConfig, TelemetryStats, TerminalLog, EngineMode } from './types';
 import { DEFAULT_CONFIG } from './data/defaultConfig';
-import { SimulatedMinerEngine, createLog } from './utils/minerEngine';
+import { createLog } from './utils/minerEngine';
+import { MinerService } from './services/minerService';
 import { Header } from './components/Header';
 import { StatusSemaforo } from './components/StatusSemaforo';
 import { ConfigPanel } from './components/ConfigPanel';
@@ -28,6 +29,7 @@ export default function App() {
   });
 
   const [minerState, setMinerState] = useState<MinerState>('STOPPED');
+  const [engineMode, setEngineMode] = useState<EngineMode>('SIMULATED');
   const [logs, setLogs] = useState<TerminalLog[]>(() => [
     createLog('[*] MinerApp lista. Interfaz cargada en entorno web seguro.'),
     createLog('[*] Parámetros de seguridad TLS/SSL listos para iniciar.'),
@@ -51,8 +53,25 @@ export default function App() {
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [logsCopied, setLogsCopied] = useState(false);
 
-  // Engine ref
-  const engineRef = useRef<SimulatedMinerEngine | null>(null);
+  // Service ref
+  const serviceRef = useRef<MinerService | null>(null);
+
+  // Initialize unified MinerService on mount
+  useEffect(() => {
+    const service = new MinerService(config, {
+      onLog: (newLog) => setLogs((prev) => [...prev.slice(-300), newLog]),
+      onStats: (newStats) => setStats(newStats),
+      onStateChange: (newState) => setMinerState(newState),
+      onModeChange: (newMode) => setEngineMode(newMode),
+    });
+
+    serviceRef.current = service;
+    service.startHealthMonitoring();
+
+    return () => {
+      service.destroy();
+    };
+  }, []);
 
   // Save user settings when updated
   const handleConfigChange = (updated: Partial<AdvancedMinerConfig>) => {
@@ -63,8 +82,8 @@ export default function App() {
       } catch {
         // ignore
       }
-      if (engineRef.current) {
-        engineRef.current.updateConfig(next);
+      if (serviceRef.current) {
+        serviceRef.current.updateConfig(next);
       }
       return next;
     });
@@ -86,22 +105,15 @@ export default function App() {
       return;
     }
 
-    if (!engineRef.current) {
-      engineRef.current = new SimulatedMinerEngine(config, {
-        onLog: (newLog) => setLogs((prev) => [...prev, newLog]),
-        onStats: (newStats) => setStats(newStats),
-        onStateChange: (newState) => setMinerState(newState),
-      });
-    } else {
-      engineRef.current.updateConfig(config);
+    if (serviceRef.current) {
+      serviceRef.current.updateConfig(config);
+      serviceRef.current.start();
     }
-
-    engineRef.current.start();
   };
 
   const handleStopMining = () => {
-    if (engineRef.current) {
-      engineRef.current.stop();
+    if (serviceRef.current) {
+      serviceRef.current.stop();
     }
   };
 
@@ -118,21 +130,13 @@ export default function App() {
     setTimeout(() => setLogsCopied(false), 2000);
   };
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (engineRef.current) {
-        engineRef.current.stop();
-      }
-    };
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#0b0e14] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
       <Header
         onOpenConfigModal={() => setIsConfigModalOpen(true)}
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
         isRunning={minerState === 'MINING'}
+        mode={engineMode}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5">
