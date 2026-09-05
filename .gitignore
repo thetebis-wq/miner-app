@@ -1,4 +1,10 @@
-﻿# Configuraciones locales y secretos (NUNCA subir a Git)
+# Node dependencies and build
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Configuraciones locales y secretos (NUNCA subir a Git)
 user_settings.json
 config.json
 *.local.json

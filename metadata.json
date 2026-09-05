@@ -1,0 +1,8 @@
+{
+  "name": "MinerApp Local",
+  "description": "Control de Minería Segura (Monero XMR) con monitoreo en vivo, optimización de hardware y generador de configuración",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
